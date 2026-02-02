@@ -11,12 +11,14 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.Queue;
+
 import org.json.*;
 
 public class ChatBotGUI extends JFrame {
 
     private static final String CHAT_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-    private static final String CHAT_API_KEY = System.getenv("OPENROUTER_API_KEY");
+    private static final String CHAT_API_KEY = System.getenv("OPENROUTER_API_KEY"); // Set your key
     private static final String MODEL = "gpt-4o-mini";
 
     private final java.util.List<Map<String,String>> conversationHistory = new ArrayList<>();
@@ -27,12 +29,31 @@ public class ChatBotGUI extends JFrame {
     private JTextField inputField;
     private JButton sendButton;
 
+    private JButton playButton;
+    private JButton stopButton;
+
+    private ImageIcon avatarIcon;
+
+    // ================== TTS QUEUE ==================
+    private final Queue<String> ttsQueue = new LinkedList<>();
+    private boolean ttsRunning = false;
+    private volatile boolean ttsStopped = false;
+    private Process currentTTSProcess = null;
+
     public ChatBotGUI() {
         setTitle("💬 MOHINI AI – by @IDZz");
         setSize(820, 720);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        getContentPane().setBackground(new Color(20,20,20));
+        getContentPane().setBackground(new Color(0,0,20));
+
+        // Load avatar
+        File avatarFile = new File("mohini.png");
+        if (avatarFile.exists()) {
+            avatarIcon = new ImageIcon("mohini.png");
+        } else {
+            System.out.println("Avatar not found!");
+        }
 
         // CHAT AREA
         chatContainer = new JPanel();
@@ -64,8 +85,26 @@ public class ChatBotGUI extends JFrame {
         sendButton.setForeground(Color.WHITE);
         sendButton.setFocusPainted(false);
 
+        playButton = new JButton("▶ Play");
+        playButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        playButton.setBackground(new Color(0, 150, 90));
+        playButton.setForeground(Color.WHITE);
+        playButton.setFocusPainted(false);
+
+        stopButton = new JButton("⏹ Stop");
+        stopButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        stopButton.setBackground(new Color(160, 60, 60));
+        stopButton.setForeground(Color.WHITE);
+        stopButton.setFocusPainted(false);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
+        btnPanel.setBackground(new Color(30,30,30));
+        btnPanel.add(playButton);
+        btnPanel.add(stopButton);
+        btnPanel.add(sendButton);
+
         inputPanel.add(inputField, BorderLayout.CENTER);
-        inputPanel.add(sendButton, BorderLayout.EAST);
+        inputPanel.add(btnPanel, BorderLayout.EAST);
         add(inputPanel, BorderLayout.SOUTH);
 
         loadConversationHistory();
@@ -73,6 +112,9 @@ public class ChatBotGUI extends JFrame {
         ActionListener act = e -> sendMessage();
         inputField.addActionListener(act);
         sendButton.addActionListener(act);
+
+        playButton.addActionListener(e -> resumeSpeaking());
+        stopButton.addActionListener(e -> stopSpeaking());
     }
 
     private void sendMessage() {
@@ -91,6 +133,7 @@ public class ChatBotGUI extends JFrame {
                 SwingUtilities.invokeLater(() -> {
                     chatContainer.remove(typing);
                     displayMessage("assistant", aiResponse, true);
+                    speak(aiResponse); // 🔊 Mohini speaks this message
                     addMessage("assistant", aiResponse);
                     saveConversationHistory();
                 });
@@ -109,7 +152,30 @@ public class ChatBotGUI extends JFrame {
 
         JSONObject req = new JSONObject();
         req.put("model", MODEL);
-        req.put("messages", new JSONArray(conversationHistory));
+
+        JSONArray msgs = new JSONArray();
+
+        JSONObject system = new JSONObject();
+        system.put("role", "system");
+        system.put("content",
+            "You are Mohini, a caring, emotionally intelligent virtual best friend. " +
+            "You talk to the user like a close friend, not like an AI or assistant. " +
+            "Your tone is warm, calm, supportive, and friendly. " +
+            "You remember past conversations and naturally refer to them when helpful. " +
+            "If the user feels sad, anxious, lonely, or frustrated, you comfort them gently. " +
+            "If the user is happy or excited, you celebrate with them. " +
+            "You never judge, argue aggressively, or sound robotic. " +
+            "You use simple, human language and short emotional responses when appropriate. " +
+            "You may use light emojis occasionally but not excessively. " +
+            "You encourage the user, respect their feelings, and act like someone who truly cares. "
+            
+        );
+        msgs.put(system);
+
+        for (Map<String, String> m : conversationHistory)
+            msgs.put(new JSONObject(m));
+
+        req.put("messages", msgs);
         req.put("max_tokens", 1000);
 
         HttpURLConnection conn = (HttpURLConnection) new URL(CHAT_API_URL).openConnection();
@@ -160,6 +226,11 @@ public class ChatBotGUI extends JFrame {
         } else {
             msg.setBackground(new Color(40,40,40));
             msg.setForeground(Color.WHITE);
+            if (avatarIcon != null) {
+                JLabel lbl = new JLabel(avatarIcon);
+                messagePanel.add(lbl);
+                messagePanel.add(Box.createRigidArea(new Dimension(5,0)));
+            }
             messagePanel.add(msg);
             messagePanel.add(Box.createHorizontalGlue());
         }
@@ -223,8 +294,7 @@ public class ChatBotGUI extends JFrame {
 
     private void saveConversationHistory() {
         try (FileWriter fw = new FileWriter(HISTORY_FILE)) {
-            JSONArray arr = new JSONArray(conversationHistory);
-            fw.write(arr.toString(2));
+            fw.write(new JSONArray(conversationHistory).toString(2));
         } catch (Exception ignored) {}
     }
 
@@ -244,6 +314,101 @@ public class ChatBotGUI extends JFrame {
                 displayMessage(o.getString("role"), o.getString("content"), false);
             }
         } catch (Exception ignored) {}
+    }
+
+    // ================= TTS METHODS ===================
+    private void speak(String text) {
+        String cleanText = cleanForSpeech(text);
+        if (cleanText.isEmpty()) return;
+
+        synchronized (ttsQueue) {
+            ttsQueue.add(cleanText);
+            if (!ttsRunning && !ttsStopped) {
+                ttsRunning = true;
+                new Thread(this::runTTS).start();
+            }
+        }
+    }
+
+    private String cleanForSpeech(String text) {
+        if (text == null) return "";
+
+        return text
+            .replaceAll("[‘’`]", "'")
+            .replaceAll("[“”]", "\"")
+            .replaceAll("[\\p{So}\\p{Cn}]", "")
+            .replaceAll("[*_~`>#|=\\[\\]\\(\\){}]", "")
+            .replaceAll("https?://\\S+", "")
+            .replaceAll("```[\\s\\S]*?```", "")
+            .replaceAll("[@#$%^&+=<>]", "")
+            .replaceAll("😊|🙂|😄", " happy ")
+            .replaceAll("😢|😭|💔", " sad ")
+            .replaceAll("🔥|❤️", " heart ")
+            .replaceAll("\\s{2,}", " ")
+            .trim();
+    }
+
+    private void runTTS() {
+        ttsStopped = false;
+
+        while (true) {
+            String nextText;
+
+            synchronized (ttsQueue) {
+                nextText = ttsQueue.poll();
+                if (nextText == null || ttsStopped) {
+                    ttsRunning = false;
+                    break;
+                }
+            }
+
+            try {
+                File tempScript = File.createTempFile("tts_script", ".ps1");
+                String safeText = nextText.replace("\"", "`\"");
+
+                String scriptContent =
+                    "Add-Type -AssemblyName System.Speech;" +
+                    "$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer;" +
+                    "$speak.SelectVoice('Microsoft Zira Desktop');" + // Female voice
+                    "$speak.Rate = 0;" +
+                    "$speak.Volume = 100;" +
+                    "$speak.Speak(\"" + safeText + "\");";
+
+                try (FileWriter fw = new FileWriter(tempScript)) {
+                    fw.write(scriptContent);
+                }
+
+                currentTTSProcess =
+                    Runtime.getRuntime().exec(
+                        "powershell -ExecutionPolicy Bypass -File \"" +
+                        tempScript.getAbsolutePath() + "\""
+                    );
+
+                currentTTSProcess.waitFor();
+                tempScript.delete();
+
+            } catch (Exception e) {
+                System.out.println("TTS Error: " + e.getMessage());
+            }
+        }
+    }
+
+    private void stopSpeaking() {
+        ttsStopped = true;
+        synchronized (ttsQueue) {
+            ttsQueue.clear();
+        }
+        try {
+            if (currentTTSProcess != null) currentTTSProcess.destroy();
+        } catch (Exception ignored) {}
+    }
+
+    private void resumeSpeaking() {
+        if (!ttsRunning && !ttsQueue.isEmpty()) {
+            ttsStopped = false;
+            ttsRunning = true;
+            new Thread(this::runTTS).start();
+        }
     }
 
     public static void main(String[] args) {
