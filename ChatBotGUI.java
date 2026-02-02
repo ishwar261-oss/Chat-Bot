@@ -341,9 +341,6 @@ public class ChatBotGUI extends JFrame {
             .replaceAll("https?://\\S+", "")
             .replaceAll("```[\\s\\S]*?```", "")
             .replaceAll("[@#$%^&+=<>]", "")
-            .replaceAll("😊|🙂|😄", " happy ")
-            .replaceAll("😢|😭|💔", " sad ")
-            .replaceAll("🔥|❤️", " heart ")
             .replaceAll("\\s{2,}", " ")
             .trim();
     }
@@ -415,3 +412,4 @@ public class ChatBotGUI extends JFrame {
         SwingUtilities.invokeLater(() -> new ChatBotGUI().setVisible(true));
     }
 }
+
