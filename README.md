@@ -1,6 +1,6 @@
 # 💬 Mohini AI – Your Virtual Best Friend
 
-**Mohini AI** is a desktop chatbot built in **Java Swing**, designed to be a **warm, emotionally intelligent virtual friend**. It uses the **OpenRouter GPT-4o-mini model** to chat naturally, remember past conversations, and provide **support, encouragement, and companionship**. The application also features **Text-to-Speech (TTS)** to speak responses aloud.
+Developed an AI-based virtual assistant designed to simulate real-time human interaction through text and voice features. Built with a focus on clean UI, event-driven architecture, and modular programming, enabling conversational responses, user interaction handling, and assistant-style automation. Demonstrates skills in software development, AI integration concepts, and interactive application design.
 
 ---
 
