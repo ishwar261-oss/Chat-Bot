@@ -1,4 +1,4 @@
-# 💬 Mohini AI – Your Virtual Best Friend
+# 💬 Mohini AI – Your Virtual Assistant
 
 Developed an AI-based virtual assistant designed to simulate real-time human interaction through text and voice features. Built with a focus on clean UI, event-driven architecture, and modular programming, enabling conversational responses, user interaction handling, and assistant-style automation. Demonstrates skills in software development, AI integration concepts, and interactive application design.
 
