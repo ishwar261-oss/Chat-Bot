@@ -18,7 +18,7 @@ import org.json.*;
 public class ChatBotGUI extends JFrame {
 
     private static final String CHAT_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-    private static final String CHAT_API_KEY = System.getenv("OPENROUTER_API_KEY"); // Set your key
+    private static final String CHAT_API_KEY = System.getenv("OPENROUTER_API_KEY"); // Paste your Api key Here
     private static final String MODEL = "gpt-4o-mini";
 
     private final java.util.List<Map<String,String>> conversationHistory = new ArrayList<>();
@@ -415,5 +415,6 @@ public class ChatBotGUI extends JFrame {
         SwingUtilities.invokeLater(() -> new ChatBotGUI().setVisible(true));
     }
 }
+
 
 
