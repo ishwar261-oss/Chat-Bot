@@ -34,7 +34,7 @@ public class ChatBotGUI extends JFrame {
 
     private ImageIcon avatarIcon;
 
-    // ================== TTS QUEUE ==================
+ 
     private final Queue<String> ttsQueue = new LinkedList<>();
     private boolean ttsRunning = false;
     private volatile boolean ttsStopped = false;
@@ -47,7 +47,7 @@ public class ChatBotGUI extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(new Color(0,0,20));
 
-        // Load avatar
+        
         File avatarFile = new File("mohini.png");
         if (avatarFile.exists()) {
             avatarIcon = new ImageIcon("mohini.png");
@@ -55,7 +55,6 @@ public class ChatBotGUI extends JFrame {
             System.out.println("Avatar not found!");
         }
 
-        // CHAT AREA
         chatContainer = new JPanel();
         chatContainer.setLayout(new BoxLayout(chatContainer, BoxLayout.Y_AXIS));
         chatContainer.setBackground(new Color(20,20,20));
@@ -68,7 +67,7 @@ public class ChatBotGUI extends JFrame {
 
         add(scrollPane, BorderLayout.CENTER);
 
-        // INPUT AREA
+
         JPanel inputPanel = new JPanel(new BorderLayout());
         inputPanel.setBackground(new Color(30,30,30));
 
@@ -316,7 +315,7 @@ public class ChatBotGUI extends JFrame {
         } catch (Exception ignored) {}
     }
 
-    // ================= TTS METHODS ===================
+ 
     private void speak(String text) {
         String cleanText = cleanForSpeech(text);
         if (cleanText.isEmpty()) return;
@@ -340,9 +339,6 @@ public class ChatBotGUI extends JFrame {
             .replaceAll("[*_~`>#|=\\[\\]\\(\\){}]", "")
             .replaceAll("https?://\\S+", "")
             .replaceAll("```[\\s\\S]*?```", "")
-            .replaceAll("😊|🙂|😄", " happy ")
-            .replaceAll("😢|😭|💔", " sad ")
-            .replaceAll("🔥|❤️", " heart ")
             .replaceAll("[@#$%^&+=<>]", "")
             .replaceAll("\\s{2,}", " ")
             .trim();
