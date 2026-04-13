@@ -62,16 +62,16 @@ public class ChatBotGUI extends JFrame {
         scrollPane = new JScrollPane(chatContainer);
         scrollPane.setBorder(null);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_A
 
         add(scrollPane, BorderLayout.CENTER);
 
 
         JPanel inputPanel = new JPanel(new BorderLayout());
         inputPanel.setBackground(new Color(30,30,30));
-
-        inputField = new JTextField();
+S_NEEDED);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        inputField = new JTextField();this update and manage your preferences
         inputField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         inputField.setForeground(Color.WHITE);
         inputField.setBackground(new Color(45,45,45));
@@ -140,6 +140,7 @@ public class ChatBotGUI extends JFrame {
                 SwingUtilities.invokeLater(() -> {
                     chatContainer.remove(typing);
                     displayMessage("assistant", " @ Error : NETWORK NOT AVAILABLE !!! " + ex.getMessage(), false);
+                    displayMessage
                 });
             }
         }).start();
